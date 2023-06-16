@@ -1,170 +1,150 @@
 package controllers
 
 import (
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
 	"net/http"
 
+	"github.com/iamananya/Ginco-mission-2/pkg/config"
 	"github.com/iamananya/Ginco-mission-2/pkg/models"
+
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
+	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 )
 
-var NewUser models.User
+func Login(c *gin.Context) {
+	// Retrieve the request body
+	var loginData struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	if err := c.ShouldBindJSON(&loginData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	// Retrieve the user from the database
+	var user models.User
+	db := config.GetDB()
+	if err := db.Where("email = ?", loginData.Email).First(&user).Error; err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
+		return
+	}
+
+	// Compare the provided password with the stored hash
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginData.Password)); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
+		return
+	}
+
+	// Create a session for the logged-in user
+	session := sessions.Default(c)
+	session.Set("userID", user.ID)
+	session.Save()
+
+	c.JSON(http.StatusOK, gin.H{"message": "Logged in successfully"})
+}
+
+func Logout(c *gin.Context) {
+	// Delete the session for the logged-out user
+	session := sessions.Default(c)
+	session.Clear()
+	session.Save()
+
+	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
+}
 
 // Authenticate user using x-token in headers to get user details-----
-func GetUsers(w http.ResponseWriter, r *http.Request) {
-	newUsers := models.GetAllUsers()
-	res, _ := json.Marshal(newUsers)
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(res)
+func GetUsers(c *gin.Context) {
+	users := models.GetAllUsers()
+	c.JSON(http.StatusOK, users)
 }
-func CreateUser(w http.ResponseWriter, r *http.Request) {
-	user := &models.User{}
-	requestBody, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	err = json.Unmarshal(requestBody, user)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	//  Empty Username case has been handled here
 
-	if user.Name == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	fmt.Print(user.Name, user.Password)
-	u := user.CreateUser()
+func CreateUser(c *gin.Context) {
+	var user models.User
+	c.BindJSON(&user)
 
-	// Marshal the user object into JSON
-	res, err := json.Marshal(u)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write(res)
+	user.Password = string(hashedPassword)
+	createdUser := models.CreateUser(&user)
+	c.JSON(http.StatusCreated, createdUser)
 
 }
 
 // GetMovies retrieves all movies
-func GetMovies(w http.ResponseWriter, r *http.Request) {
+func GetMovies(c *gin.Context) {
 	movies := models.GetAllMovies()
-	res, _ := json.Marshal(movies)
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(res)
+	c.JSON(http.StatusOK, movies)
 }
 
 // GetSeatTypes retrieves all seat types
-func GetSeatTypes(w http.ResponseWriter, r *http.Request) {
+func GetSeatTypes(c *gin.Context) {
 	seatTypes := models.GetAllSeatTypes()
-	res, _ := json.Marshal(seatTypes)
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(res)
+	c.JSON(http.StatusOK, seatTypes)
 }
 
 // CreateTicketPrice creates a new ticket price
-func CreateTicketPrice(w http.ResponseWriter, r *http.Request) {
+func CreateTicketPrice(c *gin.Context) {
 	ticketPrice := &models.TicketPrice{}
-	requestBody, err := ioutil.ReadAll(r.Body)
+	err := c.ShouldBindJSON(ticketPrice)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	err = json.Unmarshal(requestBody, ticketPrice)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	tp := models.CreateTicketPrice(ticketPrice)
 
-	res, err := json.Marshal(tp)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write(res)
+	c.JSON(http.StatusOK, tp)
 }
 
 // GetTicketPrices retrieves all ticket prices
-func GetTicketPrices(w http.ResponseWriter, r *http.Request) {
+func GetTicketPrices(c *gin.Context) {
 	ticketPrices := models.GetAllTicketPrices()
-	res, _ := json.Marshal(ticketPrices)
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(res)
+	c.JSON(http.StatusOK, ticketPrices)
 }
 
 // GetShows retrieves all shows
-func GetShows(w http.ResponseWriter, r *http.Request) {
+func GetShows(c *gin.Context) {
 	shows := models.GetAllShows()
-	res, _ := json.Marshal(shows)
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(res)
+	c.JSON(http.StatusOK, shows)
 }
 
 // GetSeats retrieves all seats
-func GetSeats(w http.ResponseWriter, r *http.Request) {
+func GetSeats(c *gin.Context) {
 	seats := models.GetAllSeats()
-	res, _ := json.Marshal(seats)
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(res)
+	c.JSON(http.StatusOK, seats)
 }
 
 // CreateBooking creates a new booking
-func CreateBooking(w http.ResponseWriter, r *http.Request) {
+func CreateBooking(c *gin.Context) {
 	booking := &models.Booking{}
-	requestBody, err := ioutil.ReadAll(r.Body)
+	err := c.ShouldBindJSON(booking)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	err = json.Unmarshal(requestBody, booking)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
 
 	b := models.CreateBookingInitiation(booking)
 	if b == nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	res, err := json.Marshal(b)
-	fmt.Println("controller", b)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to create booking"})
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write(res)
+	c.JSON(http.StatusOK, b)
 }
 
 // GetBookings retrieves all bookings
-func GetBookings(w http.ResponseWriter, r *http.Request) {
+func GetBookings(c *gin.Context) {
 	bookings := models.GetAllBookings()
-	res, _ := json.Marshal(bookings)
+	c.JSON(http.StatusOK, bookings)
+}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(res)
+func SetupSession() gin.HandlerFunc {
+	store := cookie.NewStore([]byte("secret"))
+	return sessions.Sessions("session", store)
 }
