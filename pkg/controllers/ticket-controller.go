@@ -9,7 +9,6 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
 )
 
 func Login(c *gin.Context) {
@@ -31,8 +30,8 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	// Compare the provided password with the stored hash
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginData.Password)); err != nil {
+	// Compare the provided password with the stored password
+	if user.Password != loginData.Password {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
 		return
 	}
@@ -43,6 +42,14 @@ func Login(c *gin.Context) {
 	session.Save()
 
 	c.JSON(http.StatusOK, gin.H{"message": "Logged in successfully"})
+}
+
+func CreateUser(c *gin.Context) {
+	var user models.User
+	c.BindJSON(&user)
+
+	createdUser := models.CreateUser(&user)
+	c.JSON(http.StatusCreated, createdUser)
 }
 
 func Logout(c *gin.Context) {
@@ -58,22 +65,6 @@ func Logout(c *gin.Context) {
 func GetUsers(c *gin.Context) {
 	users := models.GetAllUsers()
 	c.JSON(http.StatusOK, users)
-}
-
-func CreateUser(c *gin.Context) {
-	var user models.User
-	c.BindJSON(&user)
-
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
-		return
-	}
-
-	user.Password = string(hashedPassword)
-	createdUser := models.CreateUser(&user)
-	c.JSON(http.StatusCreated, createdUser)
-
 }
 
 // GetMovies retrieves all movies
