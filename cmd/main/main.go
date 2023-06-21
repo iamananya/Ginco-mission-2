@@ -19,7 +19,8 @@ func main() {
 	config := cors.DefaultConfig()
 	config.AllowOrigins = []string{"http://localhost:3000"}
 	config.AllowMethods = []string{"GET", "POST", "OPTIONS"}
-	config.AllowHeaders = []string{"Content-Type", "access-control-allow-headers", "access-control-allow-methods", "access-control-allow-origin"}
+	config.AllowHeaders = []string{"Content-Type", "access-control-allow-headers", "access-control-allow-methods", "access-control-allow-origin", "Session-Id"}
+	config.AllowCredentials = true
 	router.Use(cors.New(config))
 
 	// Apply authentication middleware to all routes except login and register
