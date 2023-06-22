@@ -10,7 +10,6 @@ import (
 	"github.com/iamananya/Ginco-mission-2/pkg/models"
 
 	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 )
 
@@ -47,17 +46,21 @@ func Login(c *gin.Context) {
 
 	// Save the session ID in the session storage
 	session := sessions.Default(c)
-	session.Set("sessionID", sessionID)
+	fmt.Println("before setting", session.Get("session-id"))
+	session.Set("session-id", sessionID)
 	err = session.Save()
+	fmt.Println("after setting session id", sessionID)
+
+	fmt.Println("after setting", session.Get("session-id"))
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update session"})
 		return
 	}
 
 	// Send the session ID in the response headers
-	c.Header("session-id", sessionID)
-	c.Header("Access-Control-Expose-Headers", "Session-Id")
-	c.SetCookie("sessionID", sessionID, 3600, "/", "", false, true) // Modify the expiration time and other cookie parameters as needed
+	c.Header("Session-ID", sessionID)
+	c.Header("Access-Control-Expose-Headers", "session-id")
 
 	c.JSON(http.StatusOK, gin.H{"message": "Logged in successfully"})
 	fmt.Println("Logged In ")
@@ -96,11 +99,6 @@ func Logout(c *gin.Context) {
 func GetUsers(c *gin.Context) {
 	users := models.GetAllUsers()
 	c.JSON(http.StatusOK, users)
-}
-
-func SetupSession() gin.HandlerFunc {
-	store := cookie.NewStore([]byte("secret"))
-	return sessions.Sessions("session", store)
 }
 
 // CreateBooking creates a new booking

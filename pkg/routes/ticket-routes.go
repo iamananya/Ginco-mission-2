@@ -18,6 +18,5 @@ var RegisterTicketRoutes = func(router *gin.Engine) {
 
 	router.POST("/ticket-prices", controllers.CreateTicketPrice)
 	router.POST("/bookings", controllers.CreateBooking)
-	router.POST("/login", controllers.Login)
 	router.POST("/logout", controllers.Logout)
 }

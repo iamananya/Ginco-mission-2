@@ -11,15 +11,13 @@ import (
 // AuthMiddleware is a middleware to check if the user is logged in
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Allow access to "/login" and "/register" URLs without user ID check
-		if c.Request.URL.Path == "/login" || (c.Request.URL.Path == "/register" && c.Request.Method == "POST" || c.Request.URL.Path == "/movies") {
+		if c.Request.URL.Path == "/login" || c.Request.URL.Path == "/register" || c.Request.URL.Path == "/movies" {
 			c.Next()
 			return
 		}
 		c.Header("Access-Control-Allow-Credentials", "true")
-
 		session := sessions.Default(c)
-		sessionID := session.Get("sessionID")
+		sessionID := session.Get("session-id")
 		requestSessionID := c.GetHeader("Session-ID")
 		fmt.Println("from request session id", requestSessionID)
 
