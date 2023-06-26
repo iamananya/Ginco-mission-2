@@ -28,6 +28,8 @@ func init() {
 	db.Model(&User{}).ModifyColumn("desc", "text")
 
 	db.Model(&Movie{}).AutoMigrate(&Movie{})
+	db.Model(&Show{}).AutoMigrate(&Show{})
+	db.Model(&Show{}).ModifyColumn("showtime_slot_1", "text")
 	// Define the relationships
 	db.Model(&SeatType{}).Related(&TicketPrice{}, "TicketPrices")
 	db.Model(&TicketPrice{}).Related(&Show{}, "Shows")

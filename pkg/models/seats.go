@@ -17,9 +17,13 @@ type Movie struct {
 }
 type Show struct {
 	gorm.Model
-	MovieID       uint      `json:"movie_id"`
-	Showtime      time.Time `json:"showtime"`
-	TicketPriceID uint      `json:"ticket_price_id"`
+	MovieID        uint      `json:"movie_id"`
+	Showtime_slot1 time.Time `json:"showtime_slot_1"`
+	Showtime_slot2 time.Time `json:"showtime_slot_2"`
+	Showtime_slot3 time.Time `json:"showtime_slot_3"`
+	Showtime_slot4 time.Time `json:"showtime_slot_4"`
+
+	TicketPriceID uint `json:"ticket_price_id"`
 	Seats         []Seat
 }
 type SeatType struct {
@@ -34,11 +38,12 @@ type Seat struct {
 	SeatNumber string `gorm:"type:varchar(10)" json:"seat_number"`
 	SeatTypeID uint   `json:"seat_type_id"`
 	IsBooked   bool   `json:"is_booked"`
+	UserID     uint   `json:"user_id"`
 }
 
 func GetAllMovies() []Movie {
 	var movies []Movie
-	db.Find(&movies)
+	db.Preload("Shows").Find(&movies)
 	return movies
 }
 func GetAllSeatTypes() []SeatType {
@@ -46,7 +51,10 @@ func GetAllSeatTypes() []SeatType {
 	db.Find(&seatTypes)
 	return seatTypes
 }
-
+func CreateSeat(seat *Seat) error {
+	err := db.Create(seat).Error
+	return err
+}
 func GetAllSeats() []Seat {
 	var seats []Seat
 	db.Find(&seats)
@@ -61,4 +69,11 @@ func GetShowsByMovieID(movieID uint) []Show {
 	var shows []Show
 	db.Where("movie_id = ?", movieID).Find(&shows)
 	return shows
+}
+func GetMovieByID(movieID uint) *Movie {
+	var movie Movie
+	if db.First(&movie, movieID).RecordNotFound() {
+		return nil
+	}
+	return &movie
 }

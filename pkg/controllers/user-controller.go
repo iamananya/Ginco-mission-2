@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/google/uuid"
+	"gopkg.in/gomail.v2"
+
 	"github.com/iamananya/Ginco-mission-2/pkg/config"
 	"github.com/iamananya/Ginco-mission-2/pkg/models"
 
@@ -81,11 +84,48 @@ func generateSessionID() (string, error) {
 func CreateUser(c *gin.Context) {
 	var user models.User
 	c.BindJSON(&user)
-
+	if !VerifyEmail(user.Email) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Email verification failed"})
+		return
+	}
 	createdUser := models.CreateUser(&user)
 	c.JSON(http.StatusCreated, createdUser)
 }
+func VerifyEmail(email string) bool {
+	smtpServer := "smtp.gmail.com"
+	smtpPort := 587
+	senderEmail := "ananyamahato03@gmail.com"
+	senderPassword := "knykuisbyxkmlxmc"
 
+	// Implement email verification logic using an SMTP server
+	mailer := gomail.NewMessage()
+	mailer.SetHeader("From", "ananyamahato03@gmail.com")
+	mailer.SetHeader("To", email)
+	mailer.SetHeader("Subject", "Email Verification for Book My Movie")
+	// Generate a verification token
+	token := generateVerificationToken()
+	// Compose the email body with the verification link
+	verificationLink := "http://localhost:3000/login?token=" + token // Replace with your login page URL
+	body := "Dear customer, Welcome to Book My Movie. Thanks for choosing us. Excited to be a part of your movie journey.\n.Please click the following link to verify your email:\n\n" + verificationLink
+	mailer.SetBody("text/plain", body)
+
+	dialer := gomail.NewDialer(smtpServer, smtpPort, senderEmail, senderPassword)
+
+	err := dialer.DialAndSend(mailer)
+	if err != nil {
+		fmt.Println("Failed to send verification email:", err)
+		return false
+	}
+
+	return true
+}
+
+func generateVerificationToken() string {
+	// Generate a unique verification token
+
+	token := uuid.New().String()
+	return token
+}
 func Logout(c *gin.Context) {
 	// Delete the session for the logged-out user
 	session := sessions.Default(c)

@@ -7,6 +7,7 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
+
 	"github.com/iamananya/Ginco-mission-2/pkg/controllers"
 	"github.com/iamananya/Ginco-mission-2/pkg/middlewares"
 	"github.com/iamananya/Ginco-mission-2/pkg/routes"
