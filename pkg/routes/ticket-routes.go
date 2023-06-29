@@ -1,21 +1,22 @@
 package routes
 
 import (
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
 	"github.com/iamananya/Ginco-mission-2/pkg/controllers"
 )
 
-var RegisterTicketRoutes = func(router *mux.Router) {
-	router.HandleFunc("/user/", controllers.CreateUser).Methods("POST")
-	router.HandleFunc("/user/", controllers.GetUsers).Methods("GET")
-	router.HandleFunc("/movies", controllers.GetMovies).Methods("GET")
-	router.HandleFunc("/seat-types", controllers.GetSeatTypes).Methods("GET")
-	router.HandleFunc("/ticket-prices", controllers.GetTicketPrices).Methods("GET")
-	router.HandleFunc("/shows", controllers.GetShows).Methods("GET")
-	router.HandleFunc("/seats", controllers.GetSeats).Methods("GET")
-	router.HandleFunc("/bookings", controllers.GetBookings).Methods("GET")
+var RegisterTicketRoutes = func(router *gin.Engine) {
+	router.POST("/register", controllers.CreateUser)
+	router.GET("/user", controllers.GetUsers)
+	router.GET("/movies", controllers.GetMovies)
+	router.GET("/seat-types", controllers.GetSeatTypes)
+	router.GET("/ticket-prices", controllers.GetTicketPrices)
+	router.GET("/shows", controllers.GetShows)
+	router.GET("/seats", controllers.GetSeats)
+	router.GET("/bookings", controllers.GetBookings)
 
-	router.HandleFunc("/ticket-prices", controllers.CreateTicketPrice).Methods("POST")
-	router.HandleFunc("/bookings", controllers.CreateBooking).Methods("POST")
-
+	router.POST("/ticket-prices", controllers.CreateTicketPrice)
+	router.POST("/bookings", controllers.CreateBooking)
+	router.POST("/login", controllers.Login)
+	router.POST("/logout", controllers.Logout)
 }

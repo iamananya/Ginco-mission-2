@@ -13,7 +13,7 @@ var db *gorm.DB
 type User struct {
 	gorm.Model
 	Name     string `gorm:"type:varchar(30);size:30" json:"name"`
-	Password string `gorm:"type:char(30)" json:"password"`
+	Password string `gorm:"type:char(60)" json:"password"`
 	Email    string `gorm:"" json:"email"`
 }
 type Movie struct {
@@ -73,14 +73,14 @@ func init() {
 	config.Connect()
 	db = config.GetDB()
 	db.AutoMigrate(&User{}, &Movie{}, &SeatType{}, &TicketPrice{}, &Show{}, &Seat{}, &Booking{}, &TicketDetails{})
-
+	db.Model(&User{}).ModifyColumn("password", "char(60)")
 	// Define the relationships
 	db.Model(&SeatType{}).Related(&TicketPrice{}, "TicketPrices")
 	db.Model(&TicketPrice{}).Related(&Show{}, "Shows")
 	db.Model(&Show{}).Related(&Seat{}, "Seats")
 }
 
-func (u *User) CreateUser() *User {
+func CreateUser(u *User) *User {
 	db.NewRecord(u)
 	db.Create(&u)
 	return u
