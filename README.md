@@ -14,5 +14,6 @@ This is the server side code based on movie ticket booking application.
  7. Modify the code with your email and password
  `senderEmail  := os.Getenv("SENDER_EMAIL")
 senderPassword  := os.Getenv("SENDER_PASSWORD")`
+ 
  Yay your client side is set up and you are good to go 💪.
 
