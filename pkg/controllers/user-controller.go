@@ -5,6 +5,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"os"
+	"strconv"
 
 	"github.com/google/uuid"
 	"gopkg.in/gomail.v2"
@@ -65,7 +67,8 @@ func Login(c *gin.Context) {
 	c.Header("Session-ID", sessionID)
 	c.Header("Access-Control-Expose-Headers", "session-id")
 
-	c.JSON(http.StatusOK, gin.H{"message": "Logged in successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Logged in successfully", "user_id": user.ID}) // Include the user ID in the response
+
 	fmt.Println("Logged In ")
 }
 func generateSessionID() (string, error) {
@@ -94,8 +97,8 @@ func CreateUser(c *gin.Context) {
 func VerifyEmail(email string) bool {
 	smtpServer := "smtp.gmail.com"
 	smtpPort := 587
-	senderEmail := "ananyamahato03@gmail.com"
-	senderPassword := "knykuisbyxkmlxmc"
+	senderEmail := os.Getenv("SENDER_EMAIL")
+	senderPassword := os.Getenv("SENDER_PASSWORD")
 
 	// Implement email verification logic using an SMTP server
 	mailer := gomail.NewMessage()
@@ -140,6 +143,16 @@ func GetUsers(c *gin.Context) {
 	users := models.GetAllUsers()
 	c.JSON(http.StatusOK, users)
 }
+func GetSingleUser(c *gin.Context) {
+	userIDStr := c.Param("id")
+	userID, err := strconv.ParseUint(userIDStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid movie ID"})
+		return
+	}
+	user := models.GetUserByID(uint(userID))
+	c.JSON(http.StatusOK, user)
+}
 
 // CreateBooking creates a new booking
 func CreateBooking(c *gin.Context) {
@@ -149,8 +162,9 @@ func CreateBooking(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
+	paymentAmount := booking.PaymentAmount
 
-	b := models.CreateBookingInitiation(booking)
+	b := models.CreateBookingInitiation(booking, paymentAmount)
 	if b == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to create booking"})
 		return
@@ -161,6 +175,17 @@ func CreateBooking(c *gin.Context) {
 
 // GetBookings retrieves all bookings
 func GetBookings(c *gin.Context) {
-	bookings := models.GetAllBookings()
-	c.JSON(http.StatusOK, bookings)
+	booking := models.GetAllBookings()
+	c.JSON(http.StatusOK, booking)
+}
+
+func GetUserTransactionHistory(c *gin.Context) {
+	userID := c.Param("userID")
+	parsedUserID, err := strconv.ParseUint(userID, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+	transactions := models.GetUserTransactionHistory(uint(parsedUserID))
+	c.JSON(http.StatusOK, transactions)
 }

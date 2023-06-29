@@ -24,6 +24,13 @@ func CreateTicketPrice(c *gin.Context) {
 
 // GetTicketPrices retrieves all ticket prices
 func GetTicketPrices(c *gin.Context) {
-	ticketPrices := models.GetAllTicketPrices()
+	movieID := c.Query("movie_id")
+
+	ticketPrices, err := models.GetAllTicketPricesByMovieID(movieID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	c.JSON(http.StatusOK, ticketPrices)
 }

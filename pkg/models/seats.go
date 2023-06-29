@@ -1,6 +1,7 @@
 package models
 
 import (
+	"errors"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -51,13 +52,37 @@ func GetAllSeatTypes() []SeatType {
 	db.Find(&seatTypes)
 	return seatTypes
 }
-func CreateSeat(seat *Seat) error {
-	err := db.Create(seat).Error
-	return err
+
+var ErrSeatAlreadyBooked = errors.New("seat is already booked")
+
+func GetSeatByNumber(tx *gorm.DB, seatNumber string) *Seat {
+	var seat Seat
+	if err := tx.Where("seat_number = ?", seatNumber).First(&seat).Error; err != nil {
+		return nil
+	}
+	return &seat
+}
+func CreateSeat(tx *gorm.DB, seat *Seat) error {
+	if err := tx.Create(seat).Error; err != nil {
+		return err
+	}
+	return nil
 }
 func GetAllSeats() []Seat {
 	var seats []Seat
 	db.Find(&seats)
+	return seats
+}
+func GetSeatByNumberAndShowID(tx *gorm.DB, seatNumber string, showID uint) *Seat {
+	var seat Seat
+	if err := tx.Where("seat_number = ? AND show_id = ?", seatNumber, int(showID)).First(&seat).Error; err != nil {
+		return nil
+	}
+	return &seat
+}
+func GetSeatsByShowID(showID string) []Seat {
+	var seats []Seat
+	db.Where("show_id = ?", showID).Find(&seats)
 	return seats
 }
 func GetAllShows() []Show {

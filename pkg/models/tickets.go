@@ -1,6 +1,8 @@
 package models
 
 import (
+	"strconv"
+
 	"github.com/iamananya/Ginco-mission-2/pkg/config"
 	"github.com/jinzhu/gorm"
 )
@@ -41,8 +43,12 @@ func CreateTicketPrice(ticketPrice *TicketPrice) *TicketPrice {
 	db.Create(&ticketPrice)
 	return ticketPrice
 }
-func GetAllTicketPrices() []TicketPrice {
+func GetAllTicketPricesByMovieID(movieID string) ([]TicketPrice, error) {
+	movieIDUint, err := strconv.ParseUint(movieID, 10, 64)
+	if err != nil {
+		return nil, err
+	}
 	var ticketPrices []TicketPrice
-	db.Find(&ticketPrices)
-	return ticketPrices
+	db.Where("movie_id = ?", movieIDUint).Find(&ticketPrices)
+	return ticketPrices, nil
 }

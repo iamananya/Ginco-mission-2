@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/iamananya/Ginco-mission-2/pkg/config"
 	"github.com/iamananya/Ginco-mission-2/pkg/models"
 
 	"github.com/gin-gonic/gin"
@@ -44,16 +45,31 @@ func CreateSeat(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	db := config.GetDB()
 
-	if err := models.CreateSeat(&seat); err != nil {
+	// Start a new transaction
+	tx := db.Begin()
+	existingSeat := models.GetSeatByNumberAndShowID(tx, seat.SeatNumber, seat.ShowID) // Modify the query to consider both seat number and show ID
+	if existingSeat != nil && existingSeat.IsBooked {
+		tx.Rollback()
+		c.JSON(http.StatusConflict, gin.H{"error": "Seat is already booked"})
+		return
+	}
+
+	// Create the seat
+	if err := models.CreateSeat(tx, &seat); err != nil {
+		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create seat"})
 		return
 	}
 
+	tx.Commit()
+
 	c.JSON(http.StatusCreated, seat)
 }
 func GetSeats(c *gin.Context) {
-	seats := models.GetAllSeats()
+	showID := c.Param("show_id")
+	seats := models.GetSeatsByShowID(showID)
 	c.JSON(http.StatusOK, seats)
 }
 func GetMovieByID(c *gin.Context) {
