@@ -12,7 +12,7 @@ import (
 // AuthMiddleware is a middleware to check if the user is logged in
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if c.Request.URL.Path == "/login" || c.Request.URL.Path == "/register" || c.Request.URL.Path == "/movies" || strings.HasPrefix(c.Request.URL.Path, "/movies/") {
+		if c.Request.URL.Path == "/login" || c.Request.URL.Path == "/register" || c.Request.URL.Path == "/movies" || strings.HasPrefix(c.Request.URL.Path, "/movies/") || c.Request.URL.Path == "/verify-email" {
 			c.Next()
 			return
 		}

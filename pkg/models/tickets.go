@@ -32,7 +32,7 @@ func init() {
 	db.Model(&Movie{}).AutoMigrate(&Movie{})
 	db.Model(&Show{}).AutoMigrate(&Show{})
 	db.Model(&Show{}).ModifyColumn("showtime_slot_1", "text")
-	// Define the relationships
+	db.Model(&Movie{}).AutoMigrate(&Seat{})
 	db.Model(&SeatType{}).Related(&TicketPrice{}, "TicketPrices")
 	db.Model(&TicketPrice{}).Related(&Show{}, "Shows")
 	db.Model(&Show{}).Related(&Seat{}, "Seats")

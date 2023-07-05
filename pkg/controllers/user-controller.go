@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/google/uuid"
@@ -29,17 +28,20 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	// Retrieve the user from the database
 	var user models.User
 	db := config.GetDB()
 	if err := db.Where("email = ?", loginData.Email).First(&user).Error; err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
 		return
 	}
+	if !user.IsEmailVerified {
+		c.JSON(http.StatusExpectationFailed, gin.H{"error": "Email not verified"})
+		return
+	}
 
 	// Compare the provided password with the stored password
 	if user.Password != loginData.Password {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "Email verified but invalid credentials"})
 		return
 	}
 
@@ -87,28 +89,52 @@ func generateSessionID() (string, error) {
 func CreateUser(c *gin.Context) {
 	var user models.User
 	c.BindJSON(&user)
-	if !VerifyEmail(user.Email) {
+	verificationToken := generateVerificationToken()
+	if !SendVerificationEmail(user.Email, verificationToken) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Email verification failed"})
 		return
+	}
+	user = models.User{
+		Name:              user.Name,
+		Email:             user.Email,
+		Password:          user.Password,
+		VerificationToken: verificationToken,
+		IsEmailVerified:   false,
 	}
 	createdUser := models.CreateUser(&user)
 	c.JSON(http.StatusCreated, createdUser)
 }
-func VerifyEmail(email string) bool {
+func VerifyEmail(c *gin.Context) {
+	token := c.Query("token") // Extract the verification token from the URL query parameters
+
+	// Find the user with the matching verification token
+	var user models.User
+	db := config.GetDB()
+	if err := db.Where("verification_token = ?", token).First(&user).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Invalid verification token"})
+		return
+	}
+
+	// Update the user's email_verified field to true
+	user.IsEmailVerified = true
+	db.Save(&user)
+
+	c.JSON(http.StatusOK, gin.H{"message": "Email verification successful"})
+}
+
+func SendVerificationEmail(email string, verificationToken string) bool {
 	smtpServer := "smtp.gmail.com"
 	smtpPort := 587
-	senderEmail := os.Getenv("SENDER_EMAIL")
-	senderPassword := os.Getenv("SENDER_PASSWORD")
+	senderEmail := "ananyamahato03@gmail.com"
+	senderPassword := "knykuisbyxkmlxmc"
 
 	// Implement email verification logic using an SMTP server
 	mailer := gomail.NewMessage()
 	mailer.SetHeader("From", "ananyamahato03@gmail.com")
 	mailer.SetHeader("To", email)
 	mailer.SetHeader("Subject", "Email Verification for Book My Movie")
-	// Generate a verification token
-	token := generateVerificationToken()
 	// Compose the email body with the verification link
-	verificationLink := "http://localhost:3000/login?token=" + token // Replace with your login page URL
+	verificationLink := "http://localhost:3000/verify-email?token=" + verificationToken // Replace with your login page URL
 	body := "Dear customer, Welcome to Book My Movie. Thanks for choosing us. Excited to be a part of your movie journey.\n.Please click the following link to verify your email:\n\n" + verificationLink
 	mailer.SetBody("text/plain", body)
 

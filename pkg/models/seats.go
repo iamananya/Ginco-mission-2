@@ -40,6 +40,7 @@ type Seat struct {
 	SeatTypeID uint   `json:"seat_type_id"`
 	IsBooked   bool   `json:"is_booked"`
 	UserID     uint   `json:"user_id"`
+	Version    uint   `json:"version" gorm:"default:1"`
 }
 
 func GetAllMovies() []Movie {

@@ -11,9 +11,11 @@ var db *gorm.DB
 
 type User struct {
 	gorm.Model
-	Name     string `gorm:"type:varchar(30);size:30" json:"name"`
-	Password string `gorm:"type:varchar(255)" json:"password"`
-	Email    string `gorm:"" json:"email"`
+	Name              string `gorm:"type:varchar(30);size:30" json:"name"`
+	Password          string `gorm:"type:varchar(255)" json:"password"`
+	Email             string `gorm:"" json:"email"`
+	VerificationToken string `gorm:"type:varchar(255)" json:"-"`
+	IsEmailVerified   bool   `gorm:"default:false" json:"-"`
 }
 type Booking struct {
 	gorm.Model

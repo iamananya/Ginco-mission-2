@@ -9,7 +9,7 @@ var RegisterTicketRoutes = func(router *gin.Engine) {
 	router.POST("/register", controllers.CreateUser)
 	router.GET("/user", controllers.GetUsers)
 	router.GET("/user/:id", controllers.GetSingleUser)
-
+	router.GET("/verify-email", controllers.VerifyEmail)
 	router.GET("/movies", controllers.GetMovies)
 	router.GET("/seat-types", controllers.GetSeatTypes)
 	router.GET("/ticket-prices", controllers.GetTicketPrices)
