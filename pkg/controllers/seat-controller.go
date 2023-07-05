@@ -1,8 +1,12 @@
 package controllers
 
 import (
+	"bytes"
+	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"strconv"
+	"testing"
 
 	"github.com/iamananya/Ginco-mission-2/pkg/config"
 	"github.com/iamananya/Ginco-mission-2/pkg/models"
@@ -45,14 +49,40 @@ func CreateSeat(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
 	db := config.GetDB()
 
 	// Start a new transaction
 	tx := db.Begin()
-	existingSeat := models.GetSeatByNumberAndShowID(tx, seat.SeatNumber, seat.ShowID) // Modify the query to consider both seat number and show ID
-	if existingSeat != nil && existingSeat.IsBooked {
-		tx.Rollback()
-		c.JSON(http.StatusConflict, gin.H{"error": "Seat is already booked"})
+
+	existingSeat := models.GetSeatByNumberAndShowID(tx, seat.SeatNumber, seat.ShowID)
+	if existingSeat != nil {
+		// Check if the seat is already booked
+		if existingSeat.IsBooked {
+			tx.Rollback()
+			c.JSON(http.StatusConflict, gin.H{"error": "Seat is already booked"})
+			return
+		}
+
+		// Perform optimistic locking by checking the version
+		if existingSeat.Version != seat.Version {
+			tx.Rollback()
+			c.JSON(http.StatusConflict, gin.H{"error": "Seat has been modified by another user"})
+			return
+		}
+
+		// Update the existing seat instead of creating a new one
+		existingSeat.IsBooked = true
+		existingSeat.Version++ // Increment the version
+		if err := tx.Save(existingSeat).Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update seat"})
+			return
+		}
+
+		tx.Commit()
+
+		c.JSON(http.StatusOK, existingSeat)
 		return
 	}
 
@@ -67,6 +97,67 @@ func CreateSeat(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, seat)
 }
+func BenchmarkSeatBooking(b *testing.B) {
+	// Set up the Gin router
+	router := gin.Default()
+	router.POST("/book-seat", func(c *gin.Context) {
+		var seat models.Seat
+		fmt.Println("apple start")
+		if err := c.ShouldBindJSON(&seat); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		fmt.Println("apple end")
+
+		db := config.GetDB()
+		tx := db.Begin()
+		tx.Exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+
+		existingSeat := models.GetSeatByNumberAndShowID(tx, seat.SeatNumber, seat.ShowID)
+		if existingSeat != nil && existingSeat.IsBooked {
+			tx.Rollback()
+			fmt.Println("Seat is already booked")
+			c.JSON(http.StatusConflict, gin.H{"error": "Seat is already booked"})
+			return
+		}
+
+		seat.IsBooked = true
+		if err := models.CreateSeat(tx, &seat); err != nil {
+			tx.Rollback()
+			fmt.Println("Failed to create seat")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create seat"})
+			return
+		}
+
+		tx.Commit()
+
+		c.JSON(http.StatusCreated, seat)
+	})
+
+	// Create a new HTTP request for seat booking
+	payload := []byte(`{"show_id": 1,
+    "seat_number": "C-3",
+    "seat_type_id": 1,
+    "is_booked": true,
+    "user_id":6}`)
+	fmt.Println("Payload:", string(payload))
+
+	req, _ := http.NewRequest(http.MethodPost, "/book-seat", bytes.NewBuffer(payload))
+	req.Header.Set("Content-Type", "application/json")
+
+	// Perform the benchmark test
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			// Create a test HTTP recorder
+			w := httptest.NewRecorder()
+
+			// Serve the HTTP request and record the response
+			router.ServeHTTP(w, req)
+		}
+	})
+}
+
 func GetSeats(c *gin.Context) {
 	showID := c.Param("show_id")
 	seats := models.GetSeatsByShowID(showID)

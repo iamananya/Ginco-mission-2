@@ -1,2 +1,5 @@
 cmd/main/main
+cmd/main/benchmark_app
+cmd/main/benchmark_results.txt
 pkg/controllers/.env
+.vscode
