@@ -158,3 +158,14 @@ func filterBookedSeats(seats []Seat, bookedSeats []Seat) []Seat {
 
 	return newSeats
 }
+func GetUserSingleTransactionByID(userID uint, transactionID uint) *Transaction {
+	transactions := GetUserTransactionHistory(userID)
+
+	for _, transaction := range transactions {
+		if transaction.BookingID == transactionID {
+			return &transaction
+		}
+	}
+
+	return nil
+}
