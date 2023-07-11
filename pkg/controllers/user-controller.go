@@ -215,3 +215,26 @@ func GetUserTransactionHistory(c *gin.Context) {
 	transactions := models.GetUserTransactionHistory(uint(parsedUserID))
 	c.JSON(http.StatusOK, transactions)
 }
+func GetUserSingleTransactionHistory(c *gin.Context) {
+	userID := c.Query("userID")
+	parsedUserID, err := strconv.ParseUint(userID, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	transactionID := c.Query("transactionID")
+	parsedTransactionID, err := strconv.ParseUint(transactionID, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid transaction ID"})
+		return
+	}
+
+	transaction := models.GetUserSingleTransactionByID(uint(parsedUserID), uint(parsedTransactionID))
+	if transaction == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Transaction not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, transaction)
+}

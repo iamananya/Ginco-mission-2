@@ -97,6 +97,74 @@ func CreateSeat(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, seat)
 }
+func DeleteSeat(c *gin.Context) {
+	seatNumber := c.Query("seat_number")
+	showID := c.Query("show_id")
+
+	db := config.GetDB()
+
+	// Start a new transaction
+	tx := db.Begin()
+	showIDUint, err := strconv.ParseUint(showID, 10, 64)
+	if err != nil {
+		// Handle the error, e.g., return an error response or log the error
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid showID"})
+		return
+	}
+
+	seat := models.GetSeatByNumberAndShowID(tx, seatNumber, uint(showIDUint))
+
+	if seat == nil {
+		tx.Rollback()
+		c.JSON(http.StatusNotFound, gin.H{"error": "Seat not found"})
+		return
+	}
+
+	if err := tx.Unscoped().Delete(seat).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete seat"})
+		return
+	}
+
+	tx.Commit()
+
+	c.JSON(http.StatusOK, gin.H{"message": "Seat deleted"})
+}
+
+func UpdateSeat(c *gin.Context) {
+	seatNumber := c.Query("seat_number")
+	showID := c.Query("show_id")
+
+	db := config.GetDB()
+
+	// Start a new transaction
+	tx := db.Begin()
+	showIDUint, err := strconv.ParseUint(showID, 10, 64)
+	if err != nil {
+		// Handle the error, e.g., return an error response or log the error
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid showID"})
+		return
+	}
+
+	seat := models.GetSeatByNumberAndShowID(tx, seatNumber, uint(showIDUint))
+	if seat == nil {
+		tx.Rollback()
+		c.JSON(http.StatusNotFound, gin.H{"error": "Seat not found"})
+		return
+	}
+
+	seat.IsBooked = true
+
+	if err := tx.Save(seat).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update seat status"})
+		return
+	}
+
+	tx.Commit()
+
+	c.JSON(http.StatusOK, seat)
+}
 func BenchmarkSeatBooking(b *testing.B) {
 	// Set up the Gin router
 	router := gin.Default()
