@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"sync"
 	"testing"
 
 	"github.com/iamananya/Ginco-mission-2/pkg/config"
@@ -43,6 +44,10 @@ func GetSeatTypes(c *gin.Context) {
 	seatTypes := models.GetAllSeatTypes()
 	c.JSON(http.StatusOK, seatTypes)
 }
+
+// Define a lock manager to synchronize seat operations
+var seatLocks sync.Map
+
 func CreateSeat(c *gin.Context) {
 	var seat models.Seat
 	if err := c.ShouldBindJSON(&seat); err != nil {
@@ -54,9 +59,15 @@ func CreateSeat(c *gin.Context) {
 
 	// Start a new transaction
 	tx := db.Begin()
-
+	// Acquire a global lock to prevent phantom leads
+	globalLock.Lock()
+	defer globalLock.Unlock()
 	existingSeat := models.GetSeatByNumberAndShowID(tx, seat.SeatNumber, seat.ShowID)
 	if existingSeat != nil {
+		// Acquire the lock for the existing seat
+		lock := getSeatLock(existingSeat.ID)
+		lock.Lock()
+
 		// Check if the seat is already booked
 		if existingSeat.IsBooked {
 			tx.Rollback()
@@ -75,13 +86,14 @@ func CreateSeat(c *gin.Context) {
 		existingSeat.IsBooked = true
 		existingSeat.Version++ // Increment the version
 		if err := tx.Save(existingSeat).Error; err != nil {
+			lock.Unlock()
 			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update seat"})
 			return
 		}
 
 		tx.Commit()
-
+		lock.Unlock()
 		c.JSON(http.StatusOK, existingSeat)
 		return
 	}
@@ -97,6 +109,16 @@ func CreateSeat(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, seat)
 }
+
+// Get or create a lock for the given seat ID
+func getSeatLock(seatID uint) *sync.Mutex {
+	lock, _ := seatLocks.LoadOrStore(seatID, &sync.Mutex{})
+	return lock.(*sync.Mutex)
+}
+
+// Global lock to prevent phantom leads
+var globalLock sync.Mutex
+
 func DeleteSeat(c *gin.Context) {
 	seatNumber := c.Query("seat_number")
 	showID := c.Query("show_id")
