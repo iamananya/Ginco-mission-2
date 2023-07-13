@@ -2,10 +2,8 @@ package middlewares
 
 import (
 	"fmt"
-	"net/http"
 	"strings"
 
-	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,29 +15,29 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 		c.Header("Access-Control-Allow-Credentials", "true")
-		session := sessions.Default(c)
-		sessionID := session.Get("session-id")
+		// session := sessions.Default(c)
+		// sessionID := session.Get("session-id")
 		requestSessionID := c.GetHeader("Session-ID")
 		fmt.Println("from request session id", requestSessionID)
 
-		fmt.Println("session id from session storage", sessionID)
-		if requestSessionID == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "request empty Unauthorized"})
-			c.Abort()
-			return
-		}
-		if sessionID == nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "empty Unauthorized"})
-			c.Abort()
-			return
-		}
+		// fmt.Println("session id from session storage", sessionID)
+		// if requestSessionID == "" {
+		// 	c.JSON(http.StatusUnauthorized, gin.H{"error": "request empty Unauthorized"})
+		// 	c.Abort()
+		// 	return
+		// }
+		// if sessionID == nil {
+		// 	c.JSON(http.StatusUnauthorized, gin.H{"error": "empty Unauthorized"})
+		// 	c.Abort()
+		// 	return
+		// }
 
-		// Compare the session ID from the session storage with the one in the request headers
-		if sessionID != requestSessionID {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "not same Unauthorized"})
-			c.Abort()
-			return
-		}
+		// // Compare the session ID from the session storage with the one in the request headers
+		// if sessionID != requestSessionID {
+		// 	c.JSON(http.StatusUnauthorized, gin.H{"error": "not same Unauthorized"})
+		// 	c.Abort()
+		// 	return
+		// }
 
 		// User is authenticated, continue to the next handler
 		c.Next()
